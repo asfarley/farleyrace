@@ -3,6 +3,8 @@ import { generateTrack } from "game/track";
 import { Terrain, WORLD_SIZE } from "game/terrain";
 import { Vehicle, buildCarMesh, animateCarMesh, poseOnTerrain } from "game/vehicle";
 import { modelForPlayer } from "game/car_models";
+import { addTrackTrees } from "game/big_trees";
+import { GameAudio } from "game/audio";
 import { Input } from "game/input";
 import { TouchControls, isMobileDevice } from "game/touch";
 import { Hud } from "game/hud";
@@ -34,6 +36,7 @@ export class Game {
     this.sendAccum = 0;
 
     this.hud = new Hud(shell);
+    this.audio = new GameAudio(shell);
     this.input = new Input();
     this.touch = isMobileDevice() ? new TouchControls(shell) : null;
     if (this.touch) shell.classList.add("touch-mode");
@@ -70,6 +73,7 @@ export class Game {
     this.scene.add(this.sun.target);
 
     this.addScenery();
+    addTrackTrees(this.scene, this.track, this.terrain, this.seed);
     this.addStartBanner();
 
     // Own car.
@@ -287,6 +291,7 @@ export class Game {
         this.vehicle.update(step, input, this.terrain, this.track);
         this.physicsAccum -= step;
       }
+      this.audio.updateEngine(this.vehicle, true, input.throttle, dt);
       this.trackProgress(dt);
       this.broadcastState(dt);
       this.hud.update({
@@ -296,6 +301,8 @@ export class Game {
         raceMs: now - this.raceStartMs,
         wrongWay: this.wrongWayTime > 1.2
       });
+    } else {
+      this.audio.updateEngine(this.vehicle, false, 0, dt);
     }
 
     poseOnTerrain(this.carMesh, this.terrain, this.vehicle.x, this.vehicle.z, this.vehicle.heading);

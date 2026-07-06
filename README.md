@@ -45,6 +45,16 @@ line wins.
   results (`app/channels/lobby_channel.rb`, `app/javascript/game/network.js`).
 - **Lobbies** — `Lobby`/`Player` records in SQLite; players are identified by
   a signed cookie token, no login required (`app/controllers/lobbies_controller.rb`).
+- **Audio** — the engine note is synthesized live with the Web Audio API:
+  five detuned oscillators at harmonic multiples (½×, 1×, 2×, 3×, 4× — saw and
+  square for growl, sines for body) through a lowpass filter, with RPM driven
+  through a crude gearbox so the pitch rises and drops on shifts. A toolbar
+  button also streams internet radio (SomaFM stations + Radio Paradise) while
+  you drive (`app/javascript/game/audio.js`).
+- **Trackside trees** — large seeded procedural trees line the circuit, each
+  with branch limbs and leaf clusters; the track-side limb is longer and
+  flatter so the canopy overhangs the road, high enough for cars and the
+  chase camera to pass beneath (`app/javascript/game/big_trees.js`).
 - **Car models** — vehicles are low-poly GLB models from the
   [Kenney Car Kit](https://kenney.nl/assets/car-kit) (CC0), loaded with
   Three.js `GLTFLoader` and served from `public/models/cars/`. Each player is
