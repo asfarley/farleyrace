@@ -241,10 +241,12 @@ export class Game {
     remote.lastState = s;
   }
 
-  handleCountdown({ starts_at_ms, total_laps }) {
+  handleCountdown({ duration_ms, total_laps }) {
     this.totalLaps = total_laps;
     this.phase = "countdown";
-    this.raceStartMs = starts_at_ms;
+    // Anchor to the local clock at receipt so every client counts down the same
+    // interval regardless of wall-clock skew between devices and the server.
+    this.raceStartMs = Date.now() + duration_ms;
     this.finished = false;
     this.lap = 0;
     this.halfwayPassed = false;

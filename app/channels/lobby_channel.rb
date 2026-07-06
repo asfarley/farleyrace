@@ -35,9 +35,14 @@ class LobbyChannel < ApplicationCable::Channel
     return unless @player.host? && @lobby.reload.waiting?
     return if @lobby.players.where(connected: true).count < 1
 
-    starts_at = 4.seconds.from_now
+    duration_ms = 4000
+    starts_at = (duration_ms / 1000.0).seconds.from_now
     @lobby.update!(status: "racing", race_started_at: starts_at)
-    @lobby.broadcast(type: "countdown", starts_at_ms: (starts_at.to_f * 1000).to_i, total_laps: Lobby::TOTAL_LAPS)
+    # Send a duration, not an absolute timestamp: clients anchor the countdown
+    # to their own clock at message-receipt time. Absolute server time can't be
+    # compared against unsynchronized client wall clocks (Date.now()), which
+    # would let one player's countdown finish before another's.
+    @lobby.broadcast(type: "countdown", duration_ms: duration_ms, total_laps: Lobby::TOTAL_LAPS)
   end
 
   # Client reports crossing the finish line; server owns lap counts,
