@@ -45,3 +45,15 @@ line wins.
   results (`app/channels/lobby_channel.rb`, `app/javascript/game/network.js`).
 - **Lobbies** — `Lobby`/`Player` records in SQLite; players are identified by
   a signed cookie token, no login required (`app/controllers/lobbies_controller.rb`).
+- **Car models** — vehicles are low-poly GLB models from the
+  [Kenney Car Kit](https://kenney.nl/assets/car-kit) (CC0), loaded with
+  Three.js `GLTFLoader` and served from `public/models/cars/`. Each player is
+  assigned a distinct vehicle by player id, wheels are rigged at load time for
+  steering/rolling animation, and a procedural box car is the fallback if a
+  model fails to load (`app/javascript/game/car_models.js`).
+
+## Credits
+
+Car models: [Kenney Car Kit](https://kenney.nl/assets/car-kit) by
+[Kenney](https://kenney.nl) (Creative Commons Zero). Not a license
+requirement — just credit where it's due.

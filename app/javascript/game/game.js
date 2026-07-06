@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { generateTrack } from "game/track";
 import { Terrain, WORLD_SIZE } from "game/terrain";
 import { Vehicle, buildCarMesh, animateCarMesh, poseOnTerrain } from "game/vehicle";
+import { modelForPlayer } from "game/car_models";
 import { Input } from "game/input";
 import { TouchControls, isMobileDevice } from "game/touch";
 import { Hud } from "game/hud";
@@ -74,7 +75,7 @@ export class Game {
     // Own car.
     const start = this.track.gridSlot(0);
     this.vehicle = new Vehicle(start);
-    this.carMesh = buildCarMesh(this.playerColor);
+    this.carMesh = buildCarMesh(this.playerColor, modelForPlayer(this.playerId));
     this.scene.add(this.carMesh);
 
     this.camera = new THREE.PerspectiveCamera(70, 1, 0.1, 2000);
@@ -217,7 +218,7 @@ export class Game {
   }
 
   addRemote(player) {
-    const mesh = buildCarMesh(player.color);
+    const mesh = buildCarMesh(player.color, modelForPlayer(player.id));
     this.scene.add(mesh);
     this.remotes.set(player.id, { mesh, buffer: [], lastState: null });
   }

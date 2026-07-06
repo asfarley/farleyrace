@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { attachCarModel } from "game/car_models";
 
 // Arcade-grounded car physics on a heightfield. The car is simulated in the
 // ground plane (x, z, heading) with proper inertia: velocity is a free 2D
@@ -122,9 +123,24 @@ export class Vehicle {
   }
 }
 
-// A stylized low-poly car assembled from boxes: body, cabin, wheels, lights.
-export function buildCarMesh(colorHex) {
+// Builds a car: a Kenney Car Kit model when a model name is given (loaded
+// async into the returned group), falling back to the primitive box car if
+// the model can't be fetched.
+export function buildCarMesh(colorHex, modelName) {
   const car = new THREE.Group();
+  if (modelName) {
+    attachCarModel(car, modelName).catch((e) => {
+      console.warn(`car model ${modelName} failed to load, using fallback`, e);
+      buildPrimitiveCar(car, colorHex);
+    });
+  } else {
+    buildPrimitiveCar(car, colorHex);
+  }
+  return car;
+}
+
+// A stylized low-poly car assembled from boxes: body, cabin, wheels, lights.
+function buildPrimitiveCar(car, colorHex) {
   const color = new THREE.Color(colorHex);
 
   const bodyMat = new THREE.MeshPhongMaterial({ color, shininess: 80 });
@@ -168,7 +184,7 @@ export function buildCarMesh(colorHex) {
 
   const wheelGeo = new THREE.CylinderGeometry(0.42, 0.42, 0.32, 14);
   wheelGeo.rotateZ(Math.PI / 2);
-  const wheels = { front: [], all: [] };
+  const wheels = { front: [], all: [], radius: 0.42 };
   const positions = [
     [-1.0, 0.42, 1.45, true], [1.0, 0.42, 1.45, true],
     [-1.0, 0.42, -1.45, false], [1.0, 0.42, -1.45, false]
@@ -192,7 +208,7 @@ export function buildCarMesh(colorHex) {
 export function animateCarMesh(mesh, { forwardSpeed = 0, steer = 0 }, dt) {
   const wheels = mesh.userData.wheels;
   if (!wheels) return;
-  const spin = (forwardSpeed / 0.42) * dt;
+  const spin = (forwardSpeed / (wheels.radius || 0.42)) * dt;
   for (const w of wheels.all) w.rotateX(spin);
   // Negative: positive (right) steer swings the wheels toward -x, matching
   // the yaw convention in Vehicle#update.
