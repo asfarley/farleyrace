@@ -51,8 +51,11 @@ export class Vehicle {
   update(dt, input, terrain, track) {
     if (this.frozen) return;
 
+    // Forward is (sin h, cos h); the car's right side is forward rotated
+    // -90° about +y, i.e. (-fwdZ, fwdX). Getting this backwards flips the
+    // steering direction relative to the chase camera.
     const fwdX = Math.sin(this.heading), fwdZ = Math.cos(this.heading);
-    const rightX = fwdZ, rightZ = -fwdX;
+    const rightX = -fwdZ, rightZ = fwdX;
 
     const onTrack = track.onTrack(this.x, this.z);
     const grip = onTrack ? PARAMS.gripOnTrack : PARAMS.gripOffTrack;
@@ -104,7 +107,9 @@ export class Vehicle {
     const effSteer = this.steer * PARAMS.maxSteer / (1 + Math.abs(vFwd) * 0.035);
     vFwd = this.vx * fwdX + this.vz * fwdZ;
     if (Math.abs(vFwd) > 0.3) {
-      this.heading += (vFwd / PARAMS.wheelbase) * Math.tan(effSteer) * dt;
+      // Positive steer = turn right = heading decreases (heading grows
+      // toward +x, which is the car's left).
+      this.heading -= (vFwd / PARAMS.wheelbase) * Math.tan(effSteer) * dt;
     }
 
     this.x += this.vx * dt;
@@ -189,7 +194,9 @@ export function animateCarMesh(mesh, { forwardSpeed = 0, steer = 0 }, dt) {
   if (!wheels) return;
   const spin = (forwardSpeed / 0.42) * dt;
   for (const w of wheels.all) w.rotateX(spin);
-  for (const p of wheels.front) p.rotation.y = steer * 0.5;
+  // Negative: positive (right) steer swings the wheels toward -x, matching
+  // the yaw convention in Vehicle#update.
+  for (const p of wheels.front) p.rotation.y = -steer * 0.5;
 }
 
 // Positions a car mesh on the terrain: height from the heightfield, pitch and
