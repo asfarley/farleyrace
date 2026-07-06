@@ -18,7 +18,8 @@ const PARAMS = {
   gripOnTrack: 11.5,      // max lateral accel, m/s^2
   gripOffTrack: 5.0,
   engineOffTrackMult: 0.45,
-  topSpeed: 52            // m/s (~187 km/h)
+  topSpeed: 52,           // m/s (~187 km/h)
+  yawDamp: 2.2            // 1/s decay of collision-imparted spin
 };
 
 export class Vehicle {
@@ -29,6 +30,7 @@ export class Vehicle {
     this.vx = 0; // world-frame velocity
     this.vz = 0;
     this.steer = 0;      // smoothed steering state, -1..1
+    this.yaw = 0;        // collision-imparted yaw rate (rad/s), decays to 0
     this.frozen = true;  // locked until the countdown ends
   }
 
@@ -41,12 +43,32 @@ export class Vehicle {
     return this.vx * Math.sin(this.heading) + this.vz * Math.cos(this.heading);
   }
 
+  // Signed speed across the car (positive to the car's right). Transmitted so
+  // the server can factor sideways slip into collisions (e.g. a PIT nudge).
+  get lateralSpeed() {
+    return -this.vx * Math.cos(this.heading) + this.vz * Math.sin(this.heading);
+  }
+
   placeAt({ x, z, heading }) {
     this.x = x;
     this.z = z;
     this.heading = heading;
     this.vx = this.vz = 0;
     this.steer = 0;
+    this.yaw = 0;
+  }
+
+  // Applies a server-detected collision: a world-frame velocity change, a spin
+  // (yaw-rate delta, which is what lets a rear-quarter hit spin the car out in
+  // a PIT), and a small de-penetration nudge so the cars stop overlapping. The
+  // deltas already account for this car's share of the bump (equal masses).
+  applyImpulse({ dvx = 0, dvz = 0, dw = 0, dx = 0, dz = 0 }) {
+    if (this.frozen) return;
+    this.vx += dvx;
+    this.vz += dvz;
+    this.yaw += dw;
+    this.x += dx;
+    this.z += dz;
   }
 
   update(dt, input, terrain, track) {
@@ -111,6 +133,14 @@ export class Vehicle {
       // Positive steer = turn right = heading decreases (heading grows
       // toward +x, which is the car's left).
       this.heading -= (vFwd / PARAMS.wheelbase) * Math.tan(effSteer) * dt;
+    }
+
+    // Collision-imparted spin, integrated on top of steering and bled off so a
+    // PIT hit produces a recoverable slew rather than an endless rotation.
+    if (this.yaw !== 0) {
+      this.heading += this.yaw * dt;
+      this.yaw *= Math.max(0, 1 - PARAMS.yawDamp * dt);
+      if (Math.abs(this.yaw) < 0.02) this.yaw = 0;
     }
 
     this.x += this.vx * dt;

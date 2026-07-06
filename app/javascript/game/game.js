@@ -183,6 +183,7 @@ export class Game {
       onRejected: () => { window.location.href = "/"; },
       onRoster: (data) => this.handleRoster(data),
       onState: (data) => this.handleRemoteState(data),
+      onCollision: (data) => this.handleCollision(data),
       onCountdown: (data) => this.handleCountdown(data),
       onLap: (data) => this.handleRemoteLap(data),
       onFinished: (data) => this.handleFinished(data),
@@ -239,6 +240,13 @@ export class Game {
     remote.buffer.push({ t: performance.now(), ...s });
     if (remote.buffer.length > 30) remote.buffer.shift();
     remote.lastState = s;
+  }
+
+  // The server detected our car overlapping another and sent both cars their
+  // half of the bounce. Pick out our correction and apply it locally.
+  handleCollision({ a, b }) {
+    const mine = a?.id === this.playerId ? a : b?.id === this.playerId ? b : null;
+    if (mine) this.vehicle.applyImpulse(mine);
   }
 
   handleCountdown({ duration_ms, total_laps }) {
@@ -372,6 +380,7 @@ export class Game {
       z: round2(this.vehicle.z),
       h: round3(this.vehicle.heading),
       v: round2(this.vehicle.forwardSpeed),
+      vl: round2(this.vehicle.lateralSpeed),
       st: round2(this.vehicle.steer)
     });
   }

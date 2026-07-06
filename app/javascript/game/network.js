@@ -21,6 +21,7 @@ export class LobbyClient {
     switch (data.type) {
       case "roster":    return this.handlers.onRoster?.(data);
       case "state":     return this.handlers.onState?.(data);
+      case "collision": return this.handlers.onCollision?.(data);
       case "countdown": return this.handlers.onCountdown?.(data);
       case "lap":       return this.handlers.onLap?.(data);
       case "finished":  return this.handlers.onFinished?.(data);

@@ -12,6 +12,7 @@ class LobbyChannel < ApplicationCable::Channel
   def unsubscribed
     return if @player.nil?
 
+    CollisionTracker.shared.remove(@lobby.code, @player.id)
     @player.update!(connected: false)
     promote_new_host if @player.host?
     @lobby.reload.broadcast_roster
@@ -28,7 +29,17 @@ class LobbyChannel < ApplicationCable::Channel
     @racing = @lobby.reload.racing? unless @racing
     return unless @racing
 
-    @lobby.broadcast(type: "state", id: @player.id, s: data["s"])
+    s = data["s"]
+    @lobby.broadcast(type: "state", id: @player.id, s: s)
+
+    # The server sees every car's position as it relays state, so it detects
+    # overlaps and tells each involved client how to bounce its own car.
+    collisions = CollisionTracker.shared.update(
+      @lobby.code, @player.id,
+      x: s["x"].to_f, z: s["z"].to_f, heading: s["h"].to_f,
+      speed: s["v"].to_f, lateral: s["vl"].to_f
+    )
+    collisions.each { |hit| @lobby.broadcast(hit.merge(type: "collision")) }
   end
 
   def start_race(_data = {})
@@ -65,6 +76,7 @@ class LobbyChannel < ApplicationCable::Channel
   def back_to_lobby(_data = {})
     return unless @player.host?
 
+    CollisionTracker.shared.clear(@lobby.code)
     @lobby.reload.reset_race!
     @lobby.broadcast(type: "race_reset")
     @lobby.broadcast_roster
