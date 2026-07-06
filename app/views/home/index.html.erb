@@ -1,0 +1,33 @@
+<div class="home">
+  <div class="home-card">
+    <h1 class="logo">FARLEY<span>RACE</span></h1>
+    <p class="tagline">3D multiplayer racing. No account needed &mdash; share a code, hit the track.</p>
+
+    <% if flash[:alert] %>
+      <div class="flash"><%= flash[:alert] %></div>
+    <% end %>
+
+    <div class="forms">
+      <%= form_with url: lobbies_path, method: :post, local: true, class: "panel" do %>
+        <h2>Create a lobby</h2>
+        <label for="create-name">Your name</label>
+        <input type="text" id="create-name" name="name" maxlength="20" required placeholder="e.g. Alex" autocomplete="nickname">
+        <button type="submit" class="btn btn-primary">Create lobby</button>
+      <% end %>
+
+      <div class="divider"><span>or</span></div>
+
+      <%= form_with url: join_lobbies_path, method: :post, local: true, class: "panel" do %>
+        <h2>Join a lobby</h2>
+        <label for="join-name">Your name</label>
+        <input type="text" id="join-name" name="name" maxlength="20" required placeholder="e.g. Sam" autocomplete="nickname">
+        <label for="join-code">Lobby code</label>
+        <input type="text" id="join-code" name="code" maxlength="6" required placeholder="ABC123"
+               value="<%= params[:code] %>" class="code-input" autocapitalize="characters" autocomplete="off">
+        <button type="submit" class="btn">Join lobby</button>
+      <% end %>
+    </div>
+
+    <p class="controls-hint">Drive with <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrow keys &middot; <kbd>Space</kbd> handbrake</p>
+  </div>
+</div>

@@ -1,0 +1,53 @@
+<% content_for(:title) { "Lobby #{@lobby.code} — FarleyRace" } %>
+
+<div id="game-shell"
+     data-code="<%= @lobby.code %>"
+     data-seed="<%= @lobby.seed %>"
+     data-player-id="<%= @player.id %>"
+     data-player-name="<%= @player.name %>"
+     data-player-color="<%= @player.color %>"
+     data-host="<%= @player.host? %>"
+     data-status="<%= @lobby.status %>"
+     data-total-laps="<%= Lobby::TOTAL_LAPS %>">
+
+  <div id="game-canvas"></div>
+
+  <!-- Lobby overlay (pre-race) -->
+  <div id="lobby-panel" class="overlay-panel">
+    <h1 class="logo logo-small">FARLEY<span>RACE</span></h1>
+    <div class="code-box">
+      <div class="code-label">LOBBY CODE</div>
+      <div class="code-value" id="lobby-code"><%= @lobby.code %></div>
+      <button id="copy-link" class="btn btn-ghost" type="button">Copy invite link</button>
+    </div>
+    <h2>Drivers</h2>
+    <ul id="roster" class="roster"></ul>
+    <div id="start-area">
+      <button id="start-race" class="btn btn-primary" type="button" hidden>Start race</button>
+      <p id="waiting-msg" hidden>Waiting for the host to start the race&hellip;</p>
+    </div>
+    <p class="controls-hint">Drive with <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows &middot; <kbd>Space</kbd> handbrake</p>
+    <a class="leave-link" href="<%= root_path %>">Leave lobby</a>
+  </div>
+
+  <!-- Race HUD -->
+  <div id="hud" hidden>
+    <div id="hud-speed"><span id="speed-value">0</span><small> km/h</small></div>
+    <div id="hud-lap">LAP <span id="lap-value">1</span>/<span id="lap-total"><%= Lobby::TOTAL_LAPS %></span></div>
+    <div id="hud-time">0:00.0</div>
+    <div id="race-feed"></div>
+  </div>
+
+  <div id="countdown" hidden></div>
+  <div id="wrong-way" hidden>WRONG WAY!</div>
+
+  <!-- Results overlay (post-race) -->
+  <div id="results-panel" class="overlay-panel" hidden>
+    <h2>Race results</h2>
+    <ol id="results-list"></ol>
+    <button id="back-to-lobby" class="btn btn-primary" type="button" hidden>Back to lobby</button>
+    <p id="results-waiting" hidden>Waiting for the host&hellip;</p>
+  </div>
+
+  <div id="connection-lost" hidden>Connection lost &mdash; reconnecting&hellip;</div>
+</div>
