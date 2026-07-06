@@ -186,6 +186,17 @@ kbd {
 
 #hud { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
 
+#minimap {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  width: 160px;
+  height: 160px;
+  background: rgba(10, 14, 20, 0.45);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+}
+
 #hud-speed {
   position: absolute;
   right: 28px;
@@ -199,7 +210,7 @@ kbd {
 
 #hud-lap {
   position: absolute;
-  left: 28px;
+  left: 190px; /* clears the minimap */
   top: 20px;
   font-size: 28px;
   font-weight: 800;
@@ -209,7 +220,7 @@ kbd {
 
 #hud-time {
   position: absolute;
-  left: 28px;
+  left: 190px; /* clears the minimap */
   top: 58px;
   font-family: ui-monospace, monospace;
   font-size: 18px;
@@ -348,6 +359,9 @@ kbd {
 /* Keep the speedometer clear of the pedal cluster on touch devices. */
 .touch-mode #hud-speed { right: 24px; bottom: 140px; font-size: 38px; }
 .touch-mode #hud-speed small { font-size: 14px; }
+.touch-mode #minimap { width: 110px; height: 110px; }
+.touch-mode #hud-lap { left: 140px; font-size: 22px; }
+.touch-mode #hud-time { left: 140px; top: 50px; font-size: 15px; }
 
 #connection-lost {
   position: absolute;

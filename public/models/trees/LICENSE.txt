@@ -1,0 +1,9 @@
+Tree models by Quaternius (quaternius.com), licensed CC0 1.0 Universal
+(public domain): https://creativecommons.org/publicdomain/zero/1.0/
+
+Downloaded via poly.pizza:
+- forest-trees.glb  "Trees"       https://poly.pizza/m/etFGNvsiFv
+- pine.glb          "Pine"        https://poly.pizza/m/79gmlLnweB
+- common-tree-a.glb "Tree"        https://poly.pizza/m/2paAm1ja4w
+- common-tree-b.glb "Tree"        https://poly.pizza/m/9nvGuZlbpE
+- autumn-tree.glb   "Autumn Tree" https://poly.pizza/m/2lRubrT6Na

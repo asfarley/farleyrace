@@ -1,13 +1,64 @@
 import * as THREE from "three";
 import { createRng } from "game/rng";
+import { bigTreeTemplates, createTree } from "game/tree_models";
 
-// Large trackside trees: a tapered trunk with angled branch limbs, each limb
-// tipped with leaf clusters. Trees stand just off the shoulder and their
-// track-side limb is extra long and low-angled, so the canopy overhangs the
-// road. Everything is seeded, so all players see the same forest.
+// Large trackside trees just off the shoulder, tall enough that cars and the
+// chase camera pass under the canopy. Placement (and every other rng draw)
+// happens synchronously so all players derive the same forest from the seed;
+// the GLB models fill the placements in whenever they finish loading.
 const TREE_COUNT = 26;
-const CANOPY_CLEARANCE = 6.5; // limbs start above this height — cars and the chase camera pass under
 
+export function addTrackTrees(scene, track, terrain, seed) {
+  const rng = createRng(seed ^ 0x774ee5a1);
+  const group = new THREE.Group();
+  group.name = "track-trees";
+
+  const spots = [];
+  const stride = Math.floor(track.count / TREE_COUNT);
+  for (let i = 0; i < TREE_COUNT; i++) {
+    const idx = (i * stride + Math.floor(rng() * stride * 0.6)) % track.count;
+    // Keep the start/finish straight and its banner clear.
+    if (idx < 14 || idx > track.count - 14) continue;
+
+    const s = track.samples[idx];
+    const side = rng() < 0.5 ? -1 : 1;
+    const px = -s.dirZ * side, pz = s.dirX * side; // outward from the centerline
+    const dist = track.width / 2 + 4.5 + rng() * 3;
+    const x = s.x + px * dist;
+    const z = s.z + pz * dist;
+    spots.push({
+      x, y: terrain.heightAt(x, z), z,
+      variant: rng(),
+      height: 12 + rng() * 5,
+      yaw: rng() * Math.PI * 2
+    });
+  }
+
+  bigTreeTemplates().then((templates) => {
+    for (const spot of spots) {
+      const tree = createTree(templates[Math.floor(spot.variant * templates.length)], spot.height, true);
+      tree.position.set(spot.x, spot.y, spot.z);
+      tree.rotation.y = spot.yaw;
+      group.add(tree);
+    }
+  }).catch(() => {
+    // Model fetch failed (offline?) — fall back to the procedural trees.
+    const fallbackRng = createRng(seed ^ 0x3c6ef372);
+    for (const spot of spots) {
+      const tree = buildBigTree(fallbackRng, spot.height);
+      tree.position.set(spot.x, spot.y, spot.z);
+      tree.rotation.y = spot.yaw;
+      group.add(tree);
+    }
+  });
+
+  scene.add(group);
+  return group;
+}
+
+// Procedural fallback tree: tapered trunk, angled limbs, leaf blobs. Only
+// used when the GLB models can't be fetched.
+const CANOPY_CLEARANCE = 6.5;
 const trunkMat = new THREE.MeshLambertMaterial({ color: 0x5a4028 });
 const leafMats = [
   new THREE.MeshLambertMaterial({ color: 0x2d6b2f }),
@@ -15,41 +66,8 @@ const leafMats = [
   new THREE.MeshLambertMaterial({ color: 0x4f8f3b })
 ];
 
-export function addTrackTrees(scene, track, terrain, seed) {
-  const rng = createRng(seed ^ 0x774ee5a1);
-  const group = new THREE.Group();
-  group.name = "track-trees";
-
-  const stride = Math.floor(track.count / TREE_COUNT);
-  for (let i = 0; i < TREE_COUNT; i++) {
-    let idx = (i * stride + Math.floor(rng() * stride * 0.6)) % track.count;
-    // Keep the start/finish straight and its banner clear.
-    if (idx < 14 || idx > track.count - 14) continue;
-
-    const s = track.samples[idx];
-    const side = rng() < 0.5 ? -1 : 1;
-    const px = -s.dirZ * side, pz = s.dirX * side; // outward from the centerline
-    const dist = track.width / 2 + 3.5 + rng() * 3;
-    const x = s.x + px * dist;
-    const z = s.z + pz * dist;
-
-    const tree = buildBigTree(rng);
-    tree.position.set(x, terrain.heightAt(x, z), z);
-    // The tree's local +x is its "long limb" side; aim it back at the track:
-    // Ry maps +x to (cos ry, 0, -sin ry), which must equal (-px, -pz).
-    tree.rotation.y = Math.atan2(pz, -px);
-    group.add(tree);
-  }
-
-  scene.add(group);
-  return group;
-}
-
-// One tree: trunk, 4-6 limbs (the +x limb reaches furthest), leaf blobs on
-// every limb tip plus a crown. ~500 tris each.
-export function buildBigTree(rng) {
+export function buildBigTree(rng, height = 11 + rng() * 5) {
   const tree = new THREE.Group();
-  const height = 11 + rng() * 5;
   const trunkR = 0.5 + rng() * 0.25;
 
   const trunk = new THREE.Mesh(new THREE.CylinderGeometry(trunkR * 0.55, trunkR, height, 7), trunkMat);
@@ -69,12 +87,9 @@ export function buildBigTree(rng) {
 
   const limbs = 4 + Math.floor(rng() * 3);
   for (let l = 0; l < limbs; l++) {
-    // Limb 0 points along local +x (the track side) and reaches further and
-    // flatter than the rest — that's the overhang.
-    const overhanging = l === 0;
-    const yaw = overhanging ? 0 : (l / limbs) * Math.PI * 2 + rng() * 0.8;
-    const len = overhanging ? 7 + rng() * 3 : 3.5 + rng() * 2.5;
-    const tilt = overhanging ? 1.15 + rng() * 0.2 : 0.5 + rng() * 0.5; // from vertical
+    const yaw = (l / limbs) * Math.PI * 2 + rng() * 0.8;
+    const len = 3.5 + rng() * 2.5;
+    const tilt = 0.5 + rng() * 0.5; // from vertical
     const baseY = CANOPY_CLEARANCE + rng() * (height - CANOPY_CLEARANCE - 1);
 
     const limbR = 0.16 + len * 0.022;
@@ -93,13 +108,12 @@ export function buildBigTree(rng) {
     const tipX = Math.cos(yaw) * Math.sin(tilt) * len;
     const tipZ = -Math.sin(yaw) * Math.sin(tilt) * len;
     const tipY = baseY + Math.cos(tilt) * len;
-    const blobs = overhanging ? 3 : 2;
-    for (let b = 0; b < blobs; b++) {
+    for (let b = 0; b < 2; b++) {
       const f = 1 - b * 0.28;
       addLeaves(tipX * f + (rng() - 0.5) * 1.5,
                 tipY - (1 - f) * 1.2 + (rng() - 0.5),
                 tipZ * f + (rng() - 0.5) * 1.5,
-                (overhanging ? 2.6 : 2.1) * (0.75 + rng() * 0.4));
+                2.1 * (0.75 + rng() * 0.4));
     }
   }
 

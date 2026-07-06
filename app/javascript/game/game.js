@@ -4,10 +4,12 @@ import { Terrain, WORLD_SIZE } from "game/terrain";
 import { Vehicle, buildCarMesh, animateCarMesh, poseOnTerrain } from "game/vehicle";
 import { modelForPlayer } from "game/car_models";
 import { addTrackTrees } from "game/big_trees";
+import { scatterTreeTemplates, createTree } from "game/tree_models";
 import { GameAudio } from "game/audio";
 import { Input } from "game/input";
 import { TouchControls, isMobileDevice } from "game/touch";
 import { Hud } from "game/hud";
+import { Minimap } from "game/minimap";
 import { LobbyClient } from "game/network";
 import { createRng } from "game/rng";
 
@@ -41,6 +43,7 @@ export class Game {
     this.touch = isMobileDevice() ? new TouchControls(shell) : null;
     if (this.touch) shell.classList.add("touch-mode");
     this.buildWorld();
+    this.minimap = new Minimap(shell.querySelector("#minimap"), this.track);
     this.connect();
     this.bindUi();
     this.hud.showLobby();
@@ -97,35 +100,37 @@ export class Game {
 
   addScenery() {
     const rng = createRng(this.seed ^ 0x7f4a7c15);
-    const treeTrunk = new THREE.CylinderGeometry(0.35, 0.5, 2.4, 6);
-    const treeTop = new THREE.ConeGeometry(2.4, 5.5, 7);
-    const trunkMat = new THREE.MeshLambertMaterial({ color: 0x6b4a2b });
     const rockGeo = new THREE.DodecahedronGeometry(1.6, 0);
     const rockMat = new THREE.MeshLambertMaterial({ color: 0x8b8d92 });
 
     const treeGroup = new THREE.Group();
+    // All rng draws happen here, synchronously, so every client derives the
+    // same forest; the async model load just fills the placements in.
+    const spots = [];
     let placed = 0, tries = 0;
     while (placed < 140 && tries < 2000) {
       tries++;
       const x = (rng() - 0.5) * WORLD_SIZE * 0.85;
       const z = (rng() - 0.5) * WORLD_SIZE * 0.85;
       if (this.track.distanceToCenter(x, z) < 34) continue;
-      const y = this.terrain.heightAt(x, z);
-      const tree = new THREE.Group();
-      const trunk = new THREE.Mesh(treeTrunk, trunkMat);
-      trunk.position.y = 1.2;
-      const shade = 0.25 + rng() * 0.3;
-      const top = new THREE.Mesh(treeTop, new THREE.MeshLambertMaterial({
-        color: new THREE.Color(0.1, shade, 0.12)
-      }));
-      top.position.y = 4.5;
-      tree.add(trunk, top);
-      const sc = 0.7 + rng() * 1.1;
-      tree.scale.setScalar(sc);
-      tree.position.set(x, y, z);
-      treeGroup.add(tree);
+      spots.push({
+        x, y: this.terrain.heightAt(x, z), z,
+        variant: rng(),
+        height: 7 + rng() * 8,
+        yaw: rng() * Math.PI * 2
+      });
       placed++;
     }
+    scatterTreeTemplates().then((templates) => {
+      // Mostly pines and green deciduous, the odd autumn-orange accent.
+      const pick = (r) => r < 0.4 ? 0 : r < 0.65 ? 1 : r < 0.9 ? 2 : 3;
+      for (const s of spots) {
+        const tree = createTree(templates[pick(s.variant) % templates.length], s.height);
+        tree.position.set(s.x, s.y, s.z);
+        tree.rotation.y = s.yaw;
+        treeGroup.add(tree);
+      }
+    });
     for (let i = 0; i < 40; i++) {
       const x = (rng() - 0.5) * WORLD_SIZE * 0.85;
       const z = (rng() - 0.5) * WORLD_SIZE * 0.85;
@@ -308,6 +313,7 @@ export class Game {
     poseOnTerrain(this.carMesh, this.terrain, this.vehicle.x, this.vehicle.z, this.vehicle.heading);
     animateCarMesh(this.carMesh, { forwardSpeed: this.vehicle.forwardSpeed, steer: this.vehicle.steer }, dt);
     this.updateRemotes(dt);
+    if (this.phase !== "lobby") this.updateMinimap();
     this.updateCamera(dt);
 
     // Keep the shadow camera centred on the action.
@@ -400,6 +406,17 @@ export class Game {
       poseOnTerrain(remote.mesh, this.terrain, x, z, h);
       animateCarMesh(remote.mesh, { forwardSpeed: remote.lastState?.v ?? 0, steer: remote.lastState?.st ?? 0 }, dt);
     }
+  }
+
+  updateMinimap() {
+    // Local player last so its dot draws on top.
+    const dots = [];
+    for (const [id, remote] of this.remotes) {
+      const player = this.players.find((p) => p.id === id);
+      dots.push({ x: remote.mesh.position.x, z: remote.mesh.position.z, color: player?.color ?? "#ffffff" });
+    }
+    dots.push({ x: this.vehicle.x, z: this.vehicle.z, color: this.playerColor, isLocal: true });
+    this.minimap.update(dots);
   }
 
   updateCamera(dt) {
