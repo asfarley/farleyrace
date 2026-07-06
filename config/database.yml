@@ -28,4 +28,5 @@ test:
 # ensure the database is located in a persisted volume.
 production:
   <<: *default
-  # database: path/to/persistent/storage/production.sqlite3
+  # /rails/storage is a persistent Docker volume in the Kamal deploy
+  database: storage/production.sqlite3
