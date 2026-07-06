@@ -266,6 +266,63 @@ kbd {
 #results-list li { margin: 8px 0; }
 #results-list .time { color: var(--muted); font-family: ui-monospace, monospace; margin-left: 8px; }
 
+/* ---------- Touch controls (mobile) ---------- */
+
+#touch-controls {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 7;
+}
+
+.touch-cluster {
+  position: absolute;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+}
+.touch-cluster.steer { left: max(18px, env(safe-area-inset-left)); }
+.touch-cluster.pedals { right: max(18px, env(safe-area-inset-right)); }
+
+.touch-btn {
+  pointer-events: auto;
+  width: 74px;
+  height: 74px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.touch-btn svg { width: 46%; height: 46%; }
+.touch-btn.active { background: rgba(255, 255, 255, 0.32); }
+.touch-btn.gas { width: 92px; height: 92px; }
+.touch-btn.gas.active { background: rgba(120, 220, 120, 0.35); }
+.touch-btn.brake.active { background: rgba(230, 80, 60, 0.4); }
+.touch-btn.handbrake { width: 58px; height: 58px; }
+
+/* Narrow (portrait phone) screens: shrink the buttons so the steering and
+   pedal clusters never overlap. */
+@media (max-width: 540px) {
+  .touch-cluster { gap: 10px; }
+  .touch-btn { width: 56px; height: 56px; }
+  .touch-btn.gas { width: 72px; height: 72px; }
+  .touch-btn.handbrake { width: 46px; height: 46px; }
+}
+
+/* Keep the speedometer clear of the pedal cluster on touch devices. */
+.touch-mode #hud-speed { right: 24px; bottom: 140px; font-size: 38px; }
+.touch-mode #hud-speed small { font-size: 14px; }
+
 #connection-lost {
   position: absolute;
   bottom: 16px;

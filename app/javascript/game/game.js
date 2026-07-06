@@ -3,6 +3,7 @@ import { generateTrack } from "game/track";
 import { Terrain, WORLD_SIZE } from "game/terrain";
 import { Vehicle, buildCarMesh, animateCarMesh, poseOnTerrain } from "game/vehicle";
 import { Input } from "game/input";
+import { TouchControls, isMobileDevice } from "game/touch";
 import { Hud } from "game/hud";
 import { LobbyClient } from "game/network";
 import { createRng } from "game/rng";
@@ -33,6 +34,8 @@ export class Game {
 
     this.hud = new Hud(shell);
     this.input = new Input();
+    this.touch = isMobileDevice() ? new TouchControls(shell) : null;
+    if (this.touch) shell.classList.add("touch-mode");
     this.buildWorld();
     this.connect();
     this.bindUi();
@@ -173,7 +176,10 @@ export class Game {
       onCountdown: (data) => this.handleCountdown(data),
       onLap: (data) => this.handleRemoteLap(data),
       onFinished: (data) => this.handleFinished(data),
-      onRaceOver: (data) => this.hud.showResults(data.results, this.isHost),
+      onRaceOver: (data) => {
+        this.touch?.setVisible(false);
+        this.hud.showResults(data.results, this.isHost);
+      },
       onRaceReset: () => window.location.reload()
     });
   }
@@ -233,6 +239,7 @@ export class Game {
     this.lap = 0;
     this.halfwayPassed = false;
     this.hud.showRace();
+    this.touch?.setVisible(true);
 
     const slot = this.players.findIndex((p) => p.id === this.playerId);
     this.vehicle.placeAt(this.track.gridSlot(Math.max(slot, 0)));
@@ -272,7 +279,7 @@ export class Game {
     if (this.phase === "racing" || this.phase === "countdown") {
       // Fixed-timestep substepping keeps the car's simulated speed
       // independent of the render framerate.
-      const input = this.finished ? { throttle: 0, brake: 0.4, steer: 0, handbrake: false } : this.input.read();
+      const input = this.finished ? { throttle: 0, brake: 0.4, steer: 0, handbrake: false } : this.readInput();
       const step = 1 / 120;
       this.physicsAccum = (this.physicsAccum ?? 0) + dt;
       while (this.physicsAccum >= step) {
@@ -300,6 +307,19 @@ export class Game {
     this.sun.position.set(this.vehicle.x + 180, 260, this.vehicle.z + 120);
 
     this.renderer.render(this.scene, this.camera);
+  }
+
+  // Keyboard and touch controls are both live; whichever is pressed wins.
+  readInput() {
+    const kb = this.input.read();
+    const t = this.touch?.read();
+    if (!t) return kb;
+    return {
+      throttle: Math.max(kb.throttle, t.throttle),
+      brake: Math.max(kb.brake, t.brake),
+      steer: THREE.MathUtils.clamp(kb.steer + t.steer, -1, 1),
+      handbrake: kb.handbrake || t.handbrake
+    };
   }
 
   trackProgress(dt) {
