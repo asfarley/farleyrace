@@ -4,6 +4,7 @@ import { Terrain, WORLD_SIZE } from "game/terrain";
 import { Vehicle, buildCarMesh, animateCarMesh, poseOnTerrain } from "game/vehicle";
 import { modelForPlayer } from "game/car_models";
 import { addTrackTrees } from "game/big_trees";
+import { Sky } from "Sky";
 import { scatterTreeTemplates, createTree } from "game/tree_models";
 import { GameAudio } from "game/audio";
 import { Input } from "game/input";
@@ -57,17 +58,39 @@ export class Game {
 
   buildWorld() {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x87b5d9);
-    this.scene.fog = new THREE.Fog(0x87b5d9, 300, 900);
+    // Fog blends distant terrain into the horizon; colour matched to the
+    // Preetham sky's horizon band below. Real background comes from the Sky dome.
+    this.scene.fog = new THREE.Fog(0x9bb8cf, 350, 950);
 
     this.track = generateTrack(this.seed);
     this.terrain = new Terrain(this.seed, this.track);
     this.scene.add(this.terrain.buildMesh());
 
-    const hemi = new THREE.HemisphereLight(0xcfe8ff, 0x3a5f2f, 0.9);
+    // Shared sun direction, used by both the atmospheric sky and the shadow-
+    // casting directional light so lighting and sky stay physically consistent.
+    const elevation = 32; // degrees above the horizon
+    const azimuth = 150; // degrees around the compass
+    this.sunDir = new THREE.Vector3().setFromSphericalCoords(
+      1,
+      THREE.MathUtils.degToRad(90 - elevation),
+      THREE.MathUtils.degToRad(azimuth),
+    );
+
+    // Preetham atmospheric scattering skydome (three.js Sky addon).
+    const sky = new Sky();
+    sky.scale.setScalar(WORLD_SIZE * 4);
+    const sky_u = sky.material.uniforms;
+    sky_u.turbidity.value = 6;
+    sky_u.rayleigh.value = 2.2;
+    sky_u.mieCoefficient.value = 0.005;
+    sky_u.mieDirectionalG.value = 0.8;
+    sky_u.sunPosition.value.copy(this.sunDir);
+    this.scene.add(sky);
+
+    const hemi = new THREE.HemisphereLight(0xcfe8ff, 0x3a5f2f, 1.2);
     this.scene.add(hemi);
-    this.sun = new THREE.DirectionalLight(0xfff3d6, 1.6);
-    this.sun.position.set(180, 260, 120);
+    this.sun = new THREE.DirectionalLight(0xfff3d6, 3.0);
+    this.sun.position.copy(this.sunDir).multiplyScalar(350);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
     const s = 60;
@@ -90,6 +113,10 @@ export class Game {
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // The atmospheric sky outputs high-range radiance; tone-map it into display
+    // range. Light intensities above are boosted to compensate for the mapping.
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 0.55;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.container = this.shell.querySelector("#game-canvas");
@@ -326,9 +353,11 @@ export class Game {
     if (this.phase !== "lobby") this.updateMinimap();
     this.updateCamera(dt);
 
-    // Keep the shadow camera centred on the action.
+    // Keep the shadow camera centred on the action, sun along the sky's
+    // sun direction so cast shadows agree with the atmospheric sky.
     this.sun.target.position.set(this.vehicle.x, 0, this.vehicle.z);
-    this.sun.position.set(this.vehicle.x + 180, 260, this.vehicle.z + 120);
+    this.sun.position.copy(this.sunDir).multiplyScalar(350)
+      .add(this.sun.target.position);
 
     this.renderer.render(this.scene, this.camera);
   }
