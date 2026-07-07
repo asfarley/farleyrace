@@ -31,3 +31,19 @@
     <p class="controls-hint">Drive with <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrow keys &middot; <kbd>Space</kbd> handbrake</p>
   </div>
 </div>
+
+<%# The server already renders the invite code into #join-code via params[:code],
+    but browser bfcache / form-state restoration can wipe it back to a prior
+    empty value on pageshow. Re-apply the code from the URL after any restore. %>
+<script>
+  (function () {
+    function fillCode() {
+      var code = new URLSearchParams(window.location.search).get("code");
+      if (!code) return;
+      var input = document.getElementById("join-code");
+      if (input && !input.value) input.value = code.toUpperCase();
+    }
+    document.addEventListener("DOMContentLoaded", fillCode);
+    window.addEventListener("pageshow", fillCode);
+  })();
+</script>
