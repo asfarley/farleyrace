@@ -275,49 +275,55 @@ kbd {
 
 /* ---------- Finish banner ---------- */
 
+/* An ID selector outranks the [hidden] attribute, so the banner needs its
+   own hidden rule or it would show permanently. */
+#finish-banner[hidden] { display: none; }
+
 #finish-banner {
   position: absolute;
-  top: 50%;
+  top: 42%;
   left: 50%;
-  transform: translate(-50%, -50%);
-  width: min(720px, 92vw);
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0;
+  /* A gentle perspective tilt drapes the banner so it reads as fabric rather
+     than a flat rectangle. */
+  transform: translate(-50%, -50%) perspective(900px) rotateX(9deg);
+  width: min(640px, 90vw);
   z-index: 7;
   pointer-events: none;
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
-  animation: finish-pop 0.4s ease-out;
+  border-radius: 22px;
+  overflow: hidden;
+  background: rgba(10, 12, 16, 0.94);
+  border: 3px solid rgba(255, 255, 255, 0.92);
+  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(0, 0, 0, 0.55);
+  animation: finish-pop 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.35);
 }
 
+/* True checkerboard from a single tiled conic-gradient — crisper than the
+   overlaid linear gradients, and the rounded container clips it to the curve. */
 #finish-banner .checker {
-  height: 26px;
-  background-image:
-    linear-gradient(45deg, #111 25%, transparent 25%, transparent 75%, #111 75%),
-    linear-gradient(45deg, #111 25%, #fff 25%, #fff 75%, transparent 75%);
-  background-size: 26px 26px;
-  background-position: 0 0, 13px 13px;
-  background-color: #fff;
+  height: 30px;
+  background: conic-gradient(#141414 90deg, #fff 90deg 180deg, #141414 180deg 270deg, #fff 270deg);
+  background-size: 30px 30px;
 }
 
 #finish-text {
-  background: rgba(12, 14, 18, 0.92);
-  color: #fff;
   text-align: center;
-  font-size: 64px;
+  font-size: clamp(40px, 8vw, 66px);
   font-weight: 900;
   font-style: italic;
-  letter-spacing: 2px;
-  padding: 18px 20px;
-  text-shadow: 0 3px 18px rgba(0, 0, 0, 0.8);
+  letter-spacing: 3px;
+  color: #fff;
+  padding: 20px 24px;
+  text-shadow: 0 3px 18px rgba(0, 0, 0, 0.85);
 }
 
-#finish-banner.victory #finish-text { color: #ffd23f; }
+#finish-banner.victory #finish-text {
+  color: #ffd23f;
+  text-shadow: 0 0 26px rgba(255, 210, 63, 0.6), 0 3px 18px rgba(0, 0, 0, 0.85);
+}
 
 @keyframes finish-pop {
-  from { transform: translate(-50%, -50%) scale(0.7); opacity: 0; }
-  to   { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  from { transform: translate(-50%, -50%) perspective(900px) rotateX(9deg) scale(0.7); opacity: 0; }
+  to   { transform: translate(-50%, -50%) perspective(900px) rotateX(9deg) scale(1); opacity: 1; }
 }
 
 #results-list { text-align: left; font-size: 17px; padding-left: 30px; }
