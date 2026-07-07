@@ -15,6 +15,8 @@ export class Hud {
       feed: shell.querySelector("#race-feed"),
       countdown: shell.querySelector("#countdown"),
       wrongWay: shell.querySelector("#wrong-way"),
+      finishBanner: shell.querySelector("#finish-banner"),
+      finishText: shell.querySelector("#finish-text"),
       results: shell.querySelector("#results-panel"),
       resultsList: shell.querySelector("#results-list"),
       backBtn: shell.querySelector("#back-to-lobby"),
@@ -65,6 +67,17 @@ export class Hud {
     if (text != null) this.el.countdown.textContent = text;
   }
 
+  // Checkered flag banner shown to the local player when they cross the line.
+  showFinishBanner(won) {
+    this.el.finishText.textContent = won ? "VICTORY!" : "FINISH";
+    this.el.finishBanner.classList.toggle("victory", won);
+    this.el.finishBanner.hidden = false;
+  }
+
+  hideFinishBanner() {
+    this.el.finishBanner.hidden = true;
+  }
+
   update({ speedKmh, lap, totalLaps, raceMs, wrongWay }) {
     this.el.speed.textContent = Math.round(speedKmh);
     this.el.lap.textContent = Math.min(lap + 1, totalLaps);
@@ -85,6 +98,7 @@ export class Hud {
   showResults(results, isHost) {
     this.el.hud.hidden = true;
     this.el.wrongWay.hidden = true;
+    this.hideFinishBanner();
     this.el.results.hidden = false;
     this.el.backBtn.hidden = !isHost;
     this.el.resultsWaiting.hidden = isHost;

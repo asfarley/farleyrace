@@ -302,7 +302,10 @@ export class Game {
   handleFinished({ id, position, name }) {
     const suffix = ["st", "nd", "rd"][position - 1] || "th";
     this.hud.feed(`🏁 ${name} finished ${position}${suffix}`);
-    if (id === this.playerId) this.finished = true;
+    if (id === this.playerId) {
+      this.finished = true;
+      this.hud.showFinishBanner(position === 1);
+    }
   }
 
   // ------------------------------------------------------------- loop
@@ -326,13 +329,16 @@ export class Game {
     if (this.phase === "racing" || this.phase === "countdown") {
       // Fixed-timestep substepping keeps the car's simulated speed
       // independent of the render framerate.
-      const input = this.finished ? { throttle: 0, brake: 0.4, steer: 0, handbrake: false } : this.readInput();
+      // Once finished, hold full brake to stop quickly, then lock the car in
+      // place so it doesn't creep or get bumped around after the flag.
+      const input = this.finished ? { throttle: 0, brake: 1, steer: 0, handbrake: false } : this.readInput();
       const step = 1 / 120;
       this.physicsAccum = (this.physicsAccum ?? 0) + dt;
       while (this.physicsAccum >= step) {
         this.vehicle.update(step, input, this.terrain, this.track);
         this.physicsAccum -= step;
       }
+      if (this.finished && this.vehicle.speed < 0.8) this.vehicle.frozen = true;
       this.audio.updateEngine(this.vehicle, true, input.throttle, dt);
       this.trackProgress(dt);
       this.broadcastState(dt);

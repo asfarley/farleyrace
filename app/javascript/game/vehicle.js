@@ -9,7 +9,6 @@ import { attachCarModel } from "game/car_models";
 const PARAMS = {
   engineForce: 6200,      // N at full throttle
   brakeForce: 9800,       // N
-  reverseForce: 3200,     // N
   mass: 1150,             // kg
   dragCoeff: 1.8,         // quadratic aero drag
   rollingResist: 55,      // linear rolling resistance
@@ -95,11 +94,12 @@ export class Vehicle {
       force += input.throttle * PARAMS.engineForce * engineMult * (1 - speedRatio * speedRatio);
     }
     if (input.brake > 0) {
-      if (vFwd > 0.5) {
-        force -= input.brake * PARAMS.brakeForce;
-      } else {
-        force -= input.brake * PARAMS.reverseForce; // reverse gear
-      }
+      // Brake decelerates the car toward a stop and holds it there; it never
+      // engages reverse. Cap the braking force at exactly what zeroes the
+      // forward speed this step so it can't push the car backwards.
+      const maxDecel = input.brake * PARAMS.brakeForce;
+      const stopForce = (Math.abs(vFwd) * PARAMS.mass) / dt;
+      force -= Math.sign(vFwd) * Math.min(maxDecel, stopForce);
     }
     force -= PARAMS.dragCoeff * vFwd * Math.abs(vFwd);
     force -= PARAMS.rollingResist * vFwd * (onTrack ? 1 : 2.5);
