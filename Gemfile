@@ -41,4 +41,4 @@ group :development do
   gem "web-console"
 end
 
-gem "redis", "~> 5.4"
+gem "redis", "~> 6.0"
